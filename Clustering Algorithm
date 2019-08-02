@@ -1,55 +1,32 @@
-import matplotlib.pyplot as plt
-from matplotlib import style
-style.use('ggplot')
-import numpy as np
-from sklearn.cluster import KMeans
-from sklearn import preprocessing, model_selection
 import pandas as pd
+import csv
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import LabelEncoder
+import matplotlib.pyplot as plt
+from sklearn.metrics import silhouette_score
 
-df = pd.read_excel('WICC Mentorship Responses.xlsx')
-df.convert_objects(convert_numeric = True)
-df.fillna(0, inplace = True)
-df.drop(['Any mentors or mentees you really want to be in a group with? List as many or few as you like!',
-         'Anything else you like us to know?',
-         'School'],
-        1, inplace = True)
+data = pd.read_csv("WICC Mentorship Responses.csv")
+data.fillna('N/A', inplace = True)
+data.drop(['Major', 'Minor', 'School', 'What do you like to do for fun?'], 1, inplace = True)
+lb_make = LabelEncoder()
+data["Academic Interests"] = lb_make.fit_transform(data["Academic Interests in Computing"])
+data[["Academic Interests in Computing", "Academic Interests"]]
+data["Mentor_or_Mentee"] = lb_make.fit_transform(data["Mentor or Mentee"])
+data[["Mentor or Mentee", "Mentor_or_Mentee"]]
+data.drop(['Career interests in CS', 'Academic Interests in Computing', 'How often do you want to meet?', 'Mentor or Mentee', 'Year', 'Unnamed: 9'], 1, inplace = True)
 
-def handle_non_numerical_data(df):
-    columns = df.columns.values
-    
-    for column in columns:
-        text_digit_vals = {}
-        def convert_to_int(val):
-            return text_digit_vals[val]
-        
-        if df[column].dtype != np.int64 and df[column].dtype != np.float64:
-            column_contents = df[column].values.tolist()
-            unique_elements = set(column_contents)
-            x = 0
-            for unique in unique_elements:
-                if unique not in text_digit_vals:
-                    text_digit_vals[unique] = x
-                    x += 1
-                    
-            df[column] = list(map(convert_to_int, df[column]))
-    
-    return df
+kmeans = KMeans(n_clusters=18, random_state=0).fit(data)
 
-df = handle_non_numerical_data(df)
-print(df.head())
+# Get the cluster centroids
+print(kmeans.cluster_centers_)
 
-x = np.array(df.drop(['Academic Interests in Computing'], 1).astype(float))
-y = np.array(df['Academic Interests in Computing'])
+# Get the cluster labels
+print(kmeans.labels_)
 
-clf = KMeans(n_clusters = 2)
-clf.fit(x)
-
-centroids = clf.cluster_centers_
-labels = clf.labels_
-
-colors = 10 * ["g.", "r.", "c.", "k."]
-
-for i in range(len(x)):
-    plt.plot(x[i][0], x[i][1], colors[labels[i]], markersize = 25)
-plt.scatter(centroids[:, 0], centroids[:, 1], marker = 'x', s = 150, linewidth = 5)
+# Plotting the data points on a 2D plane
+plt.scatter(data['Academic Interests'], data['Mentor_or_Mentee'], color='r')
+plt.title('WICC Mentorship Groups')
 plt.show()
+
+# Calculate silhouette_score: 0.571501063915
+print(silhouette_score(data, kmeans.labels_))
